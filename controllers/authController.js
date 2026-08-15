@@ -52,7 +52,7 @@ const login = async (req, res) => {
 
         const token = jwt.sign(
             tokenPayload,
-            process.env.JWT_SECRET || 'mi_secreto_super_seguro_123',
+            process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
 
