@@ -1,15 +1,16 @@
 const jwt = require('jsonwebtoken');
+const db = require('../db');
+const { roles } = require('../models/schema');
+const { eq } = require('drizzle-orm');
 
 // Middleware 1: Intercepta y valida el token JWT
 const verificarToken = (req, res, next) => {
-    // Busca en los headers el token
     const authHeader = req.headers['authorization'];
 
     if (!authHeader) {
         return res.status(403).json({ error: 'No se comunicó un token de autorización' });
     }
 
-    // Extrae desde "Bearer <token>"
     const token = authHeader.split(' ')[1];
 
     if (!token) {
@@ -18,7 +19,7 @@ const verificarToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mi_secreto_super_seguro_123');
-        // Agregamos el contenido descifrado del token a req.user (contiene id_user y role)
+        // Agregamos el contenido descifrado del token a req.user
         req.user = decoded;
         next();
     } catch (error) {
@@ -26,20 +27,55 @@ const verificarToken = (req, res, next) => {
     }
 };
 
-// Middleware 2: Verifica que el usuario validado tenga rol explícito de 'Administrador'
+// Middleware 2: Verifica que el usuario validado tenga rol explícito de 'admin'
 const verificarRolAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(403).json({ error: 'Acceso denegado: Primero se debe verificar el token' });
     }
 
-    if (req.user.role !== 'Administrador') {
+    // Adaptado para aceptar variables en inglés como mencionaste
+    if (req.user.role !== 'admin' && req.user.role !== 'Administrador') {
         return res.status(403).json({ error: 'Acceso denegado: Se requiere el rol de Administrador' });
     }
 
     next();
 };
 
+// Nuevo Middleware: checkRole paramétrico (El Administrador tiene acceso universal)
+const checkRole = (allowedRole) => {
+    return async (req, res, next) => {
+        try {
+            if (!req.user || !req.user.id_role) {
+                return res.status(403).json({ error: 'Acceso denegado: El token no contiene id_role' });
+            }
+
+            // Consultar el nombre del rol usando el id_role
+            const userRoleQuery = await db.select()
+                .from(roles)
+                .where(eq(roles.id_role, req.user.id_role));
+
+            if (userRoleQuery.length === 0) {
+                return res.status(403).json({ error: 'El id_role referenciado no existe en la base de datos' });
+            }
+
+            const dbRoleName = userRoleQuery[0].name.toLowerCase();
+            const allowed = allowedRole.toLowerCase();
+
+            // El administrador siempre aprueba, sin importar qué rol se haya solicitado
+            if (dbRoleName === 'admin' || dbRoleName === 'administrador' || dbRoleName === allowed) {
+                return next();
+            }
+
+            return res.status(403).json({ error: `Acceso restringido: Se requiere permisos de ${allowedRole}` });
+        } catch (error) {
+            console.error('Error validando permisos en checkRole:', error);
+            res.status(500).json({ error: 'Error interno del servidor validando credenciales' });
+        }
+    };
+};
+
 module.exports = {
     verificarToken,
-    verificarRolAdmin
+    verificarRolAdmin,
+    checkRole
 };
