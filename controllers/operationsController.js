@@ -92,6 +92,17 @@ const getAttendance = async (req, res) => {
     }
 };
 
+// GET /api/operations/attendance/logs
+const getAttendanceLogs = async (req, res) => {
+    try {
+        const result = await db.select().from(dailyAttendance).orderBy(dailyAttendance.date);
+        res.status(200).json({ data: result });
+    } catch (error) {
+        console.error('Error al obtener la bitácora de asistencia:', error);
+        res.status(500).json({ error: 'Error interno del servidor al consultar la bitácora libre de asistencia' });
+    }
+};
+
 // POST /api/operations/attendance
 const registerAttendance = async (req, res) => {
     try {
@@ -117,5 +128,6 @@ const registerAttendance = async (req, res) => {
 module.exports = {
     createDelivery,
     getAttendance,
+    getAttendanceLogs,
     registerAttendance
 };
