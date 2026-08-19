@@ -21,6 +21,7 @@ const login = async (req, res) => {
             name: userProfiles.name,
             last_name: userProfiles.last_name,
             phone: userProfiles.phone,
+            id_school: userProfiles.id_school,
             email: userCredentials.email,
             password: userCredentials.password_hash,
             roleName: roles.name
@@ -47,7 +48,8 @@ const login = async (req, res) => {
             cedula: user.cedula,
             email: user.email,
             phone: user.phone,
-            role: user.roleName
+            role: user.roleName,
+            id_school: user.id_school
         };
 
         const token = jwt.sign(
@@ -63,7 +65,8 @@ const login = async (req, res) => {
                 id_profile: user.id_profile,
                 name: user.name,
                 last_name: user.last_name,
-                role: user.roleName
+                role: user.roleName,
+                id_school: user.id_school
             }
         });
 

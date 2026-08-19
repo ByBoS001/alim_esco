@@ -106,10 +106,11 @@ const getAttendanceLogs = async (req, res) => {
 // POST /api/operations/attendance
 const registerAttendance = async (req, res) => {
     try {
-        const { date, student_quantity, id_school } = req.body || {};
+        const { date, student_quantity } = req.body || {};
+        const id_school = req.user.id_school || req.body.id_school;
 
         if (!date || student_quantity === undefined || !id_school) {
-            return res.status(400).json({ error: 'Faltan campos requeridos (date, student_quantity, id_school)' });
+            return res.status(400).json({ error: 'Faltan campos requeridos. Si tu perfil no tiene una escuela asignada, debes enviar id_school en la petición.' });
         }
 
         const [newAttendance] = await db.insert(dailyAttendance).values({
