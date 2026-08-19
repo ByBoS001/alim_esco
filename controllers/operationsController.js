@@ -1,5 +1,5 @@
 const db = require('../db');
-const { batchInventory, dailyDeliveries, dailyAttendance } = require('../models/schema');
+const { batchInventory, dailyDeliveries, dailyAttendance, schools } = require('../models/schema');
 const { eq, gt, lt, and, sql } = require('drizzle-orm');
 
 // POST /api/operations/delivery
@@ -74,10 +74,20 @@ const createDelivery = async (req, res) => {
 // GET /api/operations/attendance
 const getAttendance = async (req, res) => {
     try {
-        const result = await db.select().from(dailyAttendance);
+        const result = await db.select({
+            date: dailyAttendance.date,
+            id_school: dailyAttendance.id_school,
+            school_name: schools.name,
+            total_students: sql`sum(${dailyAttendance.student_quantity})`.mapWith(Number)
+        })
+            .from(dailyAttendance)
+            .leftJoin(schools, eq(dailyAttendance.id_school, schools.id_school))
+            .groupBy(dailyAttendance.date, dailyAttendance.id_school, schools.name)
+            .orderBy(dailyAttendance.date);
+
         res.status(200).json({ data: result });
     } catch (error) {
-        console.error('Error al obtener la asistencia:', error);
+        console.error('Error al obtener la asistencia consolidada:', error);
         res.status(500).json({ error: 'Error interno del servidor al consultar la asistencia' });
     }
 };
