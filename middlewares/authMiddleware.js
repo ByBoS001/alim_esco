@@ -27,15 +27,17 @@ const verificarToken = (req, res, next) => {
     }
 };
 
-// Middleware 2: Verifica que el usuario validado tenga rol explícito de 'admin'
+// Middleware 2: Verifica que el usuario validado tenga rol explícito superior
 const verificarRolAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(403).json({ error: 'Acceso denegado: Primero se debe verificar el token' });
     }
 
-    // Adaptado para aceptar variables en inglés como mencionaste
-    if (req.user.role !== 'admin' && req.user.role !== 'Administrador') {
-        return res.status(403).json({ error: 'Acceso denegado: Se requiere el rol de Administrador' });
+    const { role } = req.user;
+    const lowerRole = role ? role.toLowerCase() : '';
+
+    if (!['admin', 'administrador', 'super admin', 'super administrador'].includes(lowerRole)) {
+        return res.status(403).json({ error: 'Acceso denegado: Se requiere el rol de Administrador o Super Admin' });
     }
 
     next();
@@ -62,7 +64,8 @@ const checkRole = (allowedRole) => {
             const allowed = allowedRole.toLowerCase();
 
             // El administrador siempre aprueba, sin importar qué rol se haya solicitado
-            if (dbRoleName === 'admin' || dbRoleName === 'administrador' || dbRoleName === allowed) {
+            const superRoles = ['admin', 'administrador', 'super admin', 'super administrador'];
+            if (superRoles.includes(dbRoleName) || dbRoleName === allowed) {
                 return next();
             }
 

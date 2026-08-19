@@ -5,6 +5,7 @@ const users = require('./users');
 const users_credentials = require('./users_credentials');
 const inventory = require('./inventory');
 const operations = require('./operations');
+const schools = require('./schools');
 
 // Exportamos de forma unificada todos los esquemas para la conexión principal
 module.exports = {
@@ -14,5 +15,6 @@ module.exports = {
     ...users,
     ...users_credentials,
     ...inventory,
-    ...operations
+    ...operations,
+    ...schools
 };
