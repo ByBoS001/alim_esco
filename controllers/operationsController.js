@@ -85,15 +85,16 @@ const getAttendance = async (req, res) => {
 // POST /api/operations/attendance
 const registerAttendance = async (req, res) => {
     try {
-        const { date, student_quantity } = req.body || {};
+        const { date, student_quantity, id_school } = req.body || {};
 
-        if (!date || student_quantity === undefined) {
-            return res.status(400).json({ error: 'Faltan campos requeridos (date, student_quantity)' });
+        if (!date || student_quantity === undefined || !id_school) {
+            return res.status(400).json({ error: 'Faltan campos requeridos (date, student_quantity, id_school)' });
         }
 
         const [newAttendance] = await db.insert(dailyAttendance).values({
             date,
-            student_quantity
+            student_quantity,
+            id_school
         }).returning();
 
         res.status(201).json({ message: 'Asistencia registrada correctamente', data: newAttendance });
