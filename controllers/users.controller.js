@@ -27,7 +27,7 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
     try {
-        const { email, password, cedula, name, lastName, phone, idRole } = req.body || {};
+        const { email, password, cedula, name, lastName, phone, idRole, idSchool } = req.body || {};
 
         if (!email || !password || !cedula || !name || !lastName || !idRole) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -48,6 +48,7 @@ const createUser = async (req, res) => {
                 last_name: lastName,
                 phone,
                 id_role: idRole,
+                id_school: idSchool || null,
                 id_credential: newCredential.id_credential
             }).returning();
 
@@ -68,7 +69,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { cedula, name, lastName, phone, idRole } = req.body || {};
+        const { cedula, name, lastName, phone, idRole, idSchool } = req.body || {};
 
         let updateData = {};
         if (cedula) updateData.cedula = cedula;
@@ -76,6 +77,7 @@ const updateUser = async (req, res) => {
         if (lastName) updateData.last_name = lastName;
         if (phone) updateData.phone = phone;
         if (idRole) updateData.id_role = idRole;
+        if (idSchool !== undefined) updateData.id_school = idSchool;
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: 'Nothing to update' });
