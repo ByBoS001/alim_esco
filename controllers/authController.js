@@ -49,6 +49,8 @@ const login = async (req, res) => {
         const tokenPayload = {
             id_profile: user.id_profile,
             cedula: user.cedula,
+            name: user.name,
+            last_name: user.last_name,
             email: user.email,
             phone: user.phone,
             role: user.roleName,
