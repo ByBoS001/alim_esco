@@ -68,7 +68,7 @@ CREATE TABLE `daily_deliveries` (
     FOREIGN KEY (`id_profile`) REFERENCES `user_profiles`(`id_profile`)
 );
 
--- 8. MERMAS Y SOBRANTES (Aislados por escuela)
+-- 8. MERMAS Y SOBRANTES (Aislados por escuela y rastreados por perfil de usuario)
 CREATE TABLE `decrease` (
 	`id_decrease` INT AUTO_INCREMENT PRIMARY KEY,
 	`date` DATE NOT NULL,
@@ -76,6 +76,8 @@ CREATE TABLE `decrease` (
 	`quantity_leftover` INT NOT NULL,
 	`reason` TEXT,
 	`id_school` INT NOT NULL,
+	`id_profile` INT NOT NULL,
     FOREIGN KEY (`id_batch_inventory`) REFERENCES `batch_inventory`(`id_batch_inventory`),
-    FOREIGN KEY (`id_school`) REFERENCES `schools`(`id_school`)
+    FOREIGN KEY (`id_school`) REFERENCES `schools`(`id_school`),
+    FOREIGN KEY (`id_profile`) REFERENCES `user_profiles`(`id_profile`)
 );

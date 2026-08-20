@@ -1,5 +1,5 @@
 const db = require('../db');
-const { userCredentials, userProfiles, roles } = require('../models/schema');
+const { userCredentials, userProfiles, roles, schools } = require('../models/schema');
 const { eq } = require('drizzle-orm');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -14,7 +14,7 @@ const login = async (req, res) => {
             return res.status(400).json({ error: 'Email y password son requeridos' });
         }
 
-        // Hacer JOIN userCredentials + userProfiles + roles
+        // Hacer JOIN userCredentials + userProfiles + roles + schools
         const result = await db.select({
             id_profile: userProfiles.id_profile,
             cedula: userProfiles.cedula,
@@ -22,6 +22,7 @@ const login = async (req, res) => {
             last_name: userProfiles.last_name,
             phone: userProfiles.phone,
             id_school: userProfiles.id_school,
+            school_name: schools.name,
             email: userCredentials.email,
             password: userCredentials.password_hash,
             roleName: roles.name,
@@ -29,6 +30,7 @@ const login = async (req, res) => {
         }).from(userCredentials)
             .innerJoin(userProfiles, eq(userCredentials.id_credential, userProfiles.id_credential))
             .innerJoin(roles, eq(userProfiles.id_role, roles.id_role))
+            .leftJoin(schools, eq(userProfiles.id_school, schools.id_school))
             .where(eq(userCredentials.email, email));
 
         if (result.length === 0) {
@@ -43,7 +45,7 @@ const login = async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // JWT con id_profile y id_role
+        // JWT con id_profile, id_role y nombres extra
         const tokenPayload = {
             id_profile: user.id_profile,
             cedula: user.cedula,
@@ -51,7 +53,8 @@ const login = async (req, res) => {
             phone: user.phone,
             role: user.roleName,
             id_role: user.id_role,
-            id_school: user.id_school
+            id_school: user.id_school,
+            school_name: user.school_name
         };
 
         const token = jwt.sign(
@@ -69,7 +72,8 @@ const login = async (req, res) => {
                 last_name: user.last_name,
                 role: user.roleName,
                 id_role: user.id_role,
-                id_school: user.id_school
+                id_school: user.id_school,
+                school_name: user.school_name
             }
         });
 
