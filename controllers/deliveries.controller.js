@@ -13,6 +13,11 @@ const createDelivery = async (req, res) => {
 
         // Obtener inteligentemente el ID del perfil responsable de la entrega desde el middleware de seguridad
         const id_profile = req.user.id_profile;
+        const id_school = req.user?.id_school || req.body.id_school;
+
+        if (!id_school) {
+            return res.status(400).json({ error: 'Faltan datos obligatorios: no se encontró id_school en la sesión ni en el body' });
+        }
 
         // Iniciar transacción atómica (asegura que si falla la resta, la entrega tampoco se guarde en la BD, evitando discrepancias)
         await db.transaction(async (tx) => {
@@ -36,6 +41,7 @@ const createDelivery = async (req, res) => {
             await tx.insert(dailyDeliveries).values({
                 date,
                 id_batch_inventory,
+                id_school,
                 // Insertamos la cantidad enviada en el body apuntando a la columna correcta según la base de datos (quantity_delivered)
                 quantity_delivered: total_quantity,
                 id_profile
