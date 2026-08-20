@@ -6,13 +6,15 @@ const { eq, gt, and, asc, sql } = require('drizzle-orm');
 const createBatch = async (req, res) => {
     try {
         const { id_product, total_quantity, entry_date, expiration_date } = req.body || {};
+        const id_school = (req.user && req.user.id_school) ? req.user.id_school : (req.body && req.body.id_school);
 
-        if (!id_product || total_quantity === undefined || !entry_date || !expiration_date) {
-            return res.status(400).json({ error: 'Faltan campos requeridos (id_product, total_quantity, entry_date, expiration_date)' });
+        if (!id_product || total_quantity === undefined || !entry_date || !expiration_date || !id_school) {
+            return res.status(400).json({ error: 'Faltan campos requeridos (id_product, total_quantity, entry_date, expiration_date, id_school)' });
         }
 
         const [newBatch] = await db.insert(batchInventory).values({
             id_product,
+            id_school,
             total_quantity,
             entry_date,
             expiration_date
