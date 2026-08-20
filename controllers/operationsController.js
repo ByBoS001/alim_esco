@@ -6,9 +6,10 @@ const { eq, gt, lt, and, sql } = require('drizzle-orm');
 const createDelivery = async (req, res) => {
     try {
         const { id_product, id_batch_inventory, quantity_delivered, id_profile, date } = req.body || {};
+        const id_school = req.user?.id_school || req.body.id_school;
 
-        if (!id_product || !id_batch_inventory || !quantity_delivered || !id_profile || !date) {
-            return res.status(400).json({ error: 'Faltan campos requeridos (id_product, id_batch_inventory, quantity_delivered, id_profile, date)' });
+        if (!id_product || !id_batch_inventory || !quantity_delivered || !id_profile || !date || !id_school) {
+            return res.status(400).json({ error: 'Faltan campos requeridos (id_product, id_batch_inventory, quantity_delivered, id_profile, date, id_school)' });
         }
 
         // Obtener el lote que se intenta despachar para conocer su fecha de expiración
@@ -52,6 +53,7 @@ const createDelivery = async (req, res) => {
             await tx.insert(dailyDeliveries).values({
                 date,
                 id_batch_inventory,
+                id_school,
                 quantity_delivered,
                 id_profile
             });
