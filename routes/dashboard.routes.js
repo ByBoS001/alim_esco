@@ -7,7 +7,7 @@ const { verificarToken, checkRole } = require('../middlewares/authMiddleware');
 // GET /api/alerts/expiring (Solo Operador o Admin)
 router.get('/alerts/expiring', verificarToken, checkRole('Operator'), dashboardController.getExpiringAlerts);
 
-// GET /api/reports/daily (Solo Director o Admin)
-router.get('/reports/daily', verificarToken, checkRole('Director'), dashboardController.getDailyReport);
+// GET /api/reports/daily (Director, Operator, Admin)
+router.get('/reports/daily', verificarToken, checkRole('Director', 'Operator'), dashboardController.getDailyReport);
 
 module.exports = router;

@@ -44,7 +44,7 @@ const verificarRolAdmin = (req, res, next) => {
 };
 
 // Nuevo Middleware: checkRole paramétrico (El Administrador tiene acceso universal)
-const checkRole = (allowedRole) => {
+const checkRole = (...allowedRoles) => {
     return async (req, res, next) => {
         try {
             if (!req.user || !req.user.id_role) {
@@ -61,7 +61,6 @@ const checkRole = (allowedRole) => {
             }
 
             const dbRoleName = userRoleQuery[0].name.toLowerCase();
-            const allowed = allowedRole.toLowerCase();
 
             // Mapeo de roles para evitar colisiones entre inglés y español
             const roleMappings = {
@@ -69,15 +68,23 @@ const checkRole = (allowedRole) => {
                 'director': 'director'
             };
 
-            const translatedAllowed = roleMappings[allowed] || allowed;
+            let isAllowed = false;
+            for (const role of allowedRoles) {
+                const allowed = role.toLowerCase();
+                const translatedAllowed = roleMappings[allowed] || allowed;
+                if (dbRoleName === allowed || dbRoleName === translatedAllowed) {
+                    isAllowed = true;
+                    break;
+                }
+            }
 
             // El administrador siempre aprueba, sin importar qué rol se haya solicitado
             const superRoles = ['admin', 'administrador', 'super admin', 'super administrador'];
-            if (superRoles.includes(dbRoleName) || dbRoleName === allowed || dbRoleName === translatedAllowed) {
+            if (superRoles.includes(dbRoleName) || isAllowed) {
                 return next();
             }
 
-            return res.status(403).json({ error: `Acceso restringido: Se requiere permisos de ${allowedRole}` });
+            return res.status(403).json({ error: `Acceso restringido: Se requiere permisos de ${allowedRoles.join(' o ')}` });
         } catch (error) {
             console.error('Error validando permisos en checkRole:', error);
             res.status(500).json({ error: 'Error interno del servidor validando credenciales' });
