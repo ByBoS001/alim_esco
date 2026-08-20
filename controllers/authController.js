@@ -24,7 +24,8 @@ const login = async (req, res) => {
             id_school: userProfiles.id_school,
             email: userCredentials.email,
             password: userCredentials.password_hash,
-            roleName: roles.name
+            roleName: roles.name,
+            id_role: roles.id_role
         }).from(userCredentials)
             .innerJoin(userProfiles, eq(userCredentials.id_credential, userProfiles.id_credential))
             .innerJoin(roles, eq(userProfiles.id_role, roles.id_role))
@@ -42,13 +43,14 @@ const login = async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // JWT con id_profile
+        // JWT con id_profile y id_role
         const tokenPayload = {
             id_profile: user.id_profile,
             cedula: user.cedula,
             email: user.email,
             phone: user.phone,
             role: user.roleName,
+            id_role: user.id_role,
             id_school: user.id_school
         };
 
@@ -66,6 +68,7 @@ const login = async (req, res) => {
                 name: user.name,
                 last_name: user.last_name,
                 role: user.roleName,
+                id_role: user.id_role,
                 id_school: user.id_school
             }
         });
