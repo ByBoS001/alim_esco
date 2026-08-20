@@ -77,10 +77,16 @@ const getDailyReport = async (req, res) => {
             .innerJoin(productCatalog, eq(batchInventory.id_product, productCatalog.id_product))
             .where(eq(decrease.date, date));
 
+        // Calcular la suma total de entregas y mermas del día
+        const total_deliveries = deliveriesData.reduce((acc, current) => acc + current.quantity_delivered, 0);
+        const total_decreases = decreaseData.reduce((acc, current) => acc + current.quantity_leftover, 0);
+
         // Estructura final del JSON unificado
         res.status(200).json({
             date,
             total_students,
+            total_deliveries,
+            total_decreases,
             deliveries: deliveriesData,
             decreases: decreaseData
         });
