@@ -26,6 +26,7 @@ const decrease = pgTable('decrease', {
     id_school: integer('id_school').references(() => schools.id_school).notNull(),
     quantity_leftover: integer('quantity_leftover').notNull(),
     reason: text('reason'),
+    id_profile: integer('id_profile').references(() => userProfiles.id_profile).notNull(),
 });
 
 module.exports = { dailyAttendance, dailyDeliveries, decrease };

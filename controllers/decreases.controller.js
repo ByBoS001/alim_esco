@@ -5,10 +5,12 @@ const { eq, sql } = require('drizzle-orm');
 const createDecrease = async (req, res) => {
     try {
         const { date, id_batch_inventory, quantity, reason } = req.body || {};
+        const id_profile = req.user.id_profile;
+        const id_school = req.user?.id_school || req.body.id_school;
 
         // Validar que los datos mínimos estén presentes
-        if (!date || !id_batch_inventory || quantity === undefined || !reason) {
-            return res.status(400).json({ error: 'Faltan datos obligatorios (date, id_batch_inventory, quantity, reason)' });
+        if (!date || !id_batch_inventory || quantity === undefined || !reason || !id_school || !id_profile) {
+            return res.status(400).json({ error: 'Faltan datos obligatorios (date, id_batch_inventory, quantity, reason, id_school, id_profile)' });
         }
 
         // Iniciar transacción atómica (rollback automático si falla la inserción o la resta)
@@ -29,13 +31,15 @@ const createDecrease = async (req, res) => {
                 throw new Error('INSUFFICIENT_STOCK');
             }
 
-            // 3. Insertar el registro de merma/pérdida en la tabla decrease
+            // 3. Insertar el registro de merma/pérdida en la tabla decrease junto con escuela y perfil
             await tx.insert(decrease).values({
                 date,
                 id_batch_inventory,
                 // Mapeamos la variable 'quantity' que viene del cliente con 'quantity_leftover' requerida por la base de datos
                 quantity_leftover: quantity,
-                reason
+                reason,
+                id_school,
+                id_profile
             });
 
             // 4. Descontar la pérdida del lote de inventario de forma segura
