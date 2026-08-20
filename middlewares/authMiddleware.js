@@ -63,9 +63,17 @@ const checkRole = (allowedRole) => {
             const dbRoleName = userRoleQuery[0].name.toLowerCase();
             const allowed = allowedRole.toLowerCase();
 
+            // Mapeo de roles para evitar colisiones entre inglés y español
+            const roleMappings = {
+                'operator': 'operador',
+                'director': 'director'
+            };
+
+            const translatedAllowed = roleMappings[allowed] || allowed;
+
             // El administrador siempre aprueba, sin importar qué rol se haya solicitado
             const superRoles = ['admin', 'administrador', 'super admin', 'super administrador'];
-            if (superRoles.includes(dbRoleName) || dbRoleName === allowed) {
+            if (superRoles.includes(dbRoleName) || dbRoleName === allowed || dbRoleName === translatedAllowed) {
                 return next();
             }
 
