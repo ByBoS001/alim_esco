@@ -1,9 +1,17 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { roles } = require('../models/schema');
-const { eq } = require('drizzle-orm');
+const { roles, schools, userProfiles } = require('../models/schema');
+const { eq, inArray } = require('drizzle-orm');
 
+// ─────────────────────────────────────────────────────────────
+// Constantes para identificar roles por nombre (en minúsculas)
+// ─────────────────────────────────────────────────────────────
+const SUPER_ADMIN_ROLES = ['admin', 'administrador', 'super admin', 'super administrador'];
+const ZONAL_ADMIN_ROLES = ['admin zonal', 'administrador zonal'];
+
+// ─────────────────────────────────────────────────────────────
 // Middleware 1: Intercepta y valida el token JWT
+// ─────────────────────────────────────────────────────────────
 const verificarToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
 
@@ -19,7 +27,6 @@ const verificarToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mi_secreto_super_seguro_123');
-        // Agregamos el contenido descifrado del token a req.user
         req.user = decoded;
         next();
     } catch (error) {
@@ -27,7 +34,9 @@ const verificarToken = (req, res, next) => {
     }
 };
 
-// Middleware 2: Verifica que el usuario validado tenga rol explícito superior
+// ─────────────────────────────────────────────────────────────
+// Middleware 2: Verifica rol de Admin o Super Admin (legacy)
+// ─────────────────────────────────────────────────────────────
 const verificarRolAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(403).json({ error: 'Acceso denegado: Primero se debe verificar el token' });
@@ -36,14 +45,20 @@ const verificarRolAdmin = (req, res, next) => {
     const { role } = req.user;
     const lowerRole = role ? role.toLowerCase() : '';
 
-    if (!['admin', 'administrador', 'super admin', 'super administrador'].includes(lowerRole)) {
-        return res.status(403).json({ error: 'Acceso denegado: Se requiere el rol de Administrador o Super Admin' });
+    const puedeAcceder = [...SUPER_ADMIN_ROLES, ...ZONAL_ADMIN_ROLES].includes(lowerRole);
+    if (!puedeAcceder) {
+        return res.status(403).json({ error: 'Acceso denegado: Se requiere el rol de Administrador o Admin Zonal' });
     }
 
     next();
 };
 
-// Nuevo Middleware: checkRole paramétrico (El Administrador tiene acceso universal)
+// ─────────────────────────────────────────────────────────────
+// Middleware 3: checkRole paramétrico
+// - Super Admin: acceso universal
+// - Admin Zonal: acceso universal a nivel de rol (el filtro de zona lo maneja checkZona)
+// - Otros roles: solo si están en allowedRoles
+// ─────────────────────────────────────────────────────────────
 const checkRole = (...allowedRoles) => {
     return async (req, res, next) => {
         try {
@@ -51,7 +66,6 @@ const checkRole = (...allowedRoles) => {
                 return res.status(403).json({ error: 'Acceso denegado: El token no contiene id_role' });
             }
 
-            // Consultar el nombre del rol usando el id_role
             const userRoleQuery = await db.select()
                 .from(roles)
                 .where(eq(roles.id_role, req.user.id_role));
@@ -62,7 +76,12 @@ const checkRole = (...allowedRoles) => {
 
             const dbRoleName = userRoleQuery[0].name.toLowerCase();
 
-            // Mapeo de roles para evitar colisiones entre inglés y español
+            // Super Admin y Admin Zonal siempre pasan el checkRole (el filtro de zona es checkZona)
+            if (SUPER_ADMIN_ROLES.includes(dbRoleName) || ZONAL_ADMIN_ROLES.includes(dbRoleName)) {
+                req.user.resolvedRole = dbRoleName;
+                return next();
+            }
+
             const roleMappings = {
                 'operator': 'operador',
                 'director': 'director'
@@ -78,9 +97,8 @@ const checkRole = (...allowedRoles) => {
                 }
             }
 
-            // El administrador siempre aprueba, sin importar qué rol se haya solicitado
-            const superRoles = ['admin', 'administrador', 'super admin', 'super administrador'];
-            if (superRoles.includes(dbRoleName) || isAllowed) {
+            if (isAllowed) {
+                req.user.resolvedRole = dbRoleName;
                 return next();
             }
 
@@ -92,8 +110,54 @@ const checkRole = (...allowedRoles) => {
     };
 };
 
+// ─────────────────────────────────────────────────────────────
+// Middleware 4 (NUEVO): checkZona
+//
+// Adjunta a req.zonaFilter el id_zone del Admin Zonal, o null si es Super Admin.
+// Los controllers usan req.zonaFilter para saber si deben filtrar.
+//
+// - Super Admin → req.zonaFilter = null (sin restricción)
+// - Admin Zonal → req.zonaFilter = id_zone del token
+// - Otros roles → req.zonaFilter = null (sus propias restricciones son por id_school)
+// ─────────────────────────────────────────────────────────────
+const checkZona = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(403).json({ error: 'Acceso denegado: debe verificar el token primero' });
+        }
+
+        const roleName = (req.user.role || '').toLowerCase();
+
+        if (SUPER_ADMIN_ROLES.includes(roleName)) {
+            // Super Admin: sin restricción de zona
+            req.zonaFilter = null;
+            return next();
+        }
+
+        if (ZONAL_ADMIN_ROLES.includes(roleName)) {
+            const idZone = req.user.id_zone;
+            if (!idZone) {
+                return res.status(403).json({
+                    error: 'Admin Zonal sin zona asignada. Contacte al Super Admin para asignar su zona.'
+                });
+            }
+            req.zonaFilter = idZone;
+            return next();
+        }
+
+        // Cualquier otro rol (operador, director, etc.) no tiene restricción adicional aquí
+        req.zonaFilter = null;
+        return next();
+
+    } catch (error) {
+        console.error('Error en checkZona:', error);
+        res.status(500).json({ error: 'Error interno del servidor en checkZona' });
+    }
+};
+
 module.exports = {
     verificarToken,
     verificarRolAdmin,
-    checkRole
+    checkRole,
+    checkZona
 };

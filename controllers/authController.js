@@ -3,6 +3,7 @@ const { userCredentials, userProfiles, roles, schools } = require('../models/sch
 const { eq } = require('drizzle-orm');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { decrypt } = require('../utils/crypto');
 
 const login = async (req, res) => {
     try {
@@ -22,9 +23,11 @@ const login = async (req, res) => {
             last_name: userProfiles.last_name,
             phone: userProfiles.phone,
             id_school: userProfiles.id_school,
+            id_zone: userProfiles.id_zone,
             school_name: schools.name,
             email: userCredentials.email,
             password: userCredentials.password_hash,
+            status: userCredentials.status,
             roleName: roles.name,
             id_role: roles.id_role
         }).from(userCredentials)
@@ -45,10 +48,22 @@ const login = async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        // Verificar estado de la cuenta antes de emitir el token
+        const accountStatus = user.status || 'active';
+        if (accountStatus === 'suspended') {
+            return res.status(403).json({ error: 'Cuenta suspendida. Contacte al administrador.' });
+        }
+        if (accountStatus === 'blocked') {
+            return res.status(403).json({ error: 'Cuenta bloqueada. Contacte al administrador.' });
+        }
+
+        // Descifrar la cédula antes de incluirla en el token
+        const cedulaDecrypted = decrypt(user.cedula);
+
         // JWT con id_profile, id_role y nombres extra
         const tokenPayload = {
             id_profile: user.id_profile,
-            cedula: user.cedula,
+            cedula: cedulaDecrypted,
             name: user.name,
             last_name: user.last_name,
             email: user.email,
@@ -56,7 +71,8 @@ const login = async (req, res) => {
             role: user.roleName,
             id_role: user.id_role,
             id_school: user.id_school,
-            school_name: user.school_name
+            school_name: user.school_name,
+            id_zone: user.id_zone   // zona del Admin Zonal (null si no aplica)
         };
 
         const token = jwt.sign(

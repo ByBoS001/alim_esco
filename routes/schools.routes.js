@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { getSchools, getSchoolById, createSchool, updateSchool, deleteSchool } = require('../controllers/schools.controller');
-const { verificarToken: verifyToken, verificarRolAdmin: verifyAdminRole } = require('../middlewares/authMiddleware');
+const { verificarToken, verificarRolAdmin, checkZona } = require('../middlewares/authMiddleware');
 
-// Super Admin / Role enforcement applied to write routes
-router.get('/', verifyToken, getSchools);
-router.get('/:id', verifyToken, getSchoolById);
-router.post('/', verifyToken, verifyAdminRole, createSchool);
-router.put('/:id', verifyToken, verifyAdminRole, updateSchool);
-router.delete('/:id', verifyToken, verifyAdminRole, deleteSchool);
+// GET: cualquier admin (Super o Zonal) puede listar — checkZona filtra automáticamente
+router.get('/', verificarToken, verificarRolAdmin, checkZona, getSchools);
+router.get('/:id', verificarToken, verificarRolAdmin, checkZona, getSchoolById);
+
+// Escritura: también pasa por checkZona — el controller valida que sea de su zona
+router.post('/', verificarToken, verificarRolAdmin, checkZona, createSchool);
+router.put('/:id', verificarToken, verificarRolAdmin, checkZona, updateSchool);
+router.delete('/:id', verificarToken, verificarRolAdmin, checkZona, deleteSchool);
 
 module.exports = router;
